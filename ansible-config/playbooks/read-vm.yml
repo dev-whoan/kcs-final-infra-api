@@ -1,0 +1,8 @@
+- name: Read VMs
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Get Defined VMs
+      virt:
+        command: list_vms
+      register: all_vms

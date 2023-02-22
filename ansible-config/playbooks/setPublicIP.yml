@@ -1,5 +1,5 @@
-- name: Set VM Public IP
-  hosts: "jammy-ansible"
+- name: Set VM Name and IP
+  hosts: "{{ GUEST_NAME }}"
   become: true
   tasks:
     - name: Set Public IP
