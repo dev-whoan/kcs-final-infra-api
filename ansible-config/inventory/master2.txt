@@ -1,4 +1,0 @@
-# BEGIN ANSIBLE MANAGED BLOCK
-[master2]
-root@192.168.122.179 ansible_ssh_pass=test123 ansible_ssh_common_args= '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-# END ANSIBLE MANAGED BLOCK

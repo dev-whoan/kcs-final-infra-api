@@ -4,11 +4,14 @@
   become: true
   tasks:
     - name: Set Hostname
-      blockinfile:
-        create: true
-        path: "/etc/hostname"
-        block: |
-          {{ GUEST_NAME }}
+      lineinfile:
+        path: /etc/hostname
+        state: present
+        # The String to Search
+        regexp: "ubuntu"
+        # The String to Replace
+        line: "{{ GUEST_NAME }}"
+        
     - name: Reboot
-        reboot:
-          reboot_timeout: 300
+      reboot:
+        reboot_timeout: 300

@@ -4,12 +4,16 @@ import UnableToCreateVirtualMachineException from "../exception/unableToCreateVi
 import { objectKeysToArray } from "../common/util.js";
 import fs from "fs";
 import UnableToReadVirtualMachineException from "../exception/unableToReadVirtualMachineException.js";
+/**
+ * To Do List
+ * Turn on Virtual Machines when it is defined but turned off
+ */
 
 class Worker {
   constructor(name, floatingIp, privateIp) {
-    this.name = null;
-    this.floatingIp = null;
-    this.privateIp = null;
+    this.name = name;
+    this.floatingIp = floatingIp;
+    this.privateIp = privateIp;
   }
 }
 
@@ -44,7 +48,7 @@ class AnsibleManager {
       },
     };
 
-    this.staticVMs = ["master1", "master2"]; //, "worker1", "worker2", "worker3"];
+    this.staticVMs = ["master1"]//, "master2", "worker1", "worker2", "worker3"];
     this.scaleWorkerPrefix = "dworker";
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY
       ? process.env.VM_SCALED_CAPACITY
@@ -95,18 +99,19 @@ class AnsibleManager {
 
     console.log("Read VM ALL Names: ", vmAllNames);
 
-    console.log(" Reading IPs ... ");
+    console.log("Reading IPs ... ");
     // IP 구하기
     for (let i = 0; i < vmAllNames.length; i++) {
       const item = vmAllNames[i];
       const privateIp = await this.getPrivateIP(item);
       const floatingIp = await this.getFloatingIP(item, privateIp);
-
       const nWorker = new Worker(item, floatingIp, privateIp);
+
       this.workingWorkers.push(nWorker);
     }
 
     console.log(this.workingWorkers);
+    console.log("Succeed to initialize!");
   }
 
   createStaticMachines(createList) {
@@ -166,7 +171,12 @@ class AnsibleManager {
     return JSON.parse(newOutput);
   }
 
-  async rebootVM(GUEST_NAME) {
+  /**
+   *
+   * @param {string} GUEST_NAME explicitly select target host, and it will be its hostname
+   * @returns
+   */
+  async renameAndRebootVM(GUEST_NAME) {
     return new Promise(async (resolve, reject) => {
       const yamlName = "set-vm-name";
       const yaml = path.join(this.yamlPath, yamlName);
@@ -176,7 +186,7 @@ class AnsibleManager {
       });
 
       try {
-        const result = await privCommand.exec();
+        const result = await rebootCommand.exec();
         const jsonResult = this.getResultAsJson(result.output);
         return resolve(true);
       } catch (err) {
@@ -300,6 +310,17 @@ class AnsibleManager {
         console.error("Error occured while provisioning -> vm", err);
         return reject(false);
       }
+
+      //* set host name and reboot
+      try {
+        console.log("provisioning -> name: starting..");
+        await this.renameAndRebootVM(GUEST_NAME);
+        console.log("provisioning -> name: done");
+      } catch (err) {
+        console.error("Error occured while provisioning -> name", err);
+        return reject(false);
+      }
+
       //* Set VM Floating IP
       try {
         console.log("provisioning -> fip: starting..");
