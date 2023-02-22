@@ -1,5 +1,6 @@
 - name: Read VMs
   hosts: localhost
+  gather_facts: false
   become: true
   tasks:
     - name: Get Defined VMs

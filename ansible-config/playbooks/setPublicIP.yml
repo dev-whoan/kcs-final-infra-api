@@ -1,4 +1,4 @@
-- name: Set VM Name and IP
+- name: Set VM Floating IP
   hosts: "{{ GUEST_NAME }}"
   become: true
   tasks:

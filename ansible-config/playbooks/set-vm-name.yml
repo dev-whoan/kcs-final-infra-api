@@ -1,0 +1,14 @@
+- name: Set VM Hostname And Reboot
+  hosts: "{{ GUEST_NAME }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Set Hostname
+      blockinfile:
+        create: true
+        path: "/etc/hostname"
+        block: |
+          {{ GUEST_NAME }}
+    - name: Reboot
+        reboot:
+          reboot_timeout: 300

@@ -1,0 +1,15 @@
+- name: Set VM Floating IP
+  hosts: "{{ GUEST_NAME }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Set Floating IP
+      lineinfile:
+        path: /etc/netplan/50-cloud-init.yaml
+        state: present
+        # The String to Search
+        regexp: "dhcp4: no"
+        # The String to Replace
+        line: "dhcp4: yes"
+    - name: Netplan Apply
+      command: sudo netplan apply

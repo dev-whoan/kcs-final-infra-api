@@ -1,14 +1,15 @@
 - name: Create and Start VM
   hosts: localhost
+  gather_facts: false
   become: true
   tasks:
     - name: Define VM
       command: >
         virt-install --import --name {{ GUEST_NAME }}
         --memory 2048 --vcpus 1 --noautoconsole
-        --os-variant ubuntu22.04 --hvm --network bridge=br0
-        --network network=default
-        --disk=/vm-images/jammy01.img --import
+        --os-variant ubuntu22.04 --hvm --network bridge=br0,mac={{ FLOAT_MAC_ADDR }}
+        --network network=default,mac={{ PRIV_MAC_ADDR }}
+        --disk=/vm-images/{{ GUEST_NAME }}.img --import
     - name: Ensure VM is started
       virt:
         name: "{{ GUEST_NAME }}"
@@ -36,7 +37,8 @@
 
     - name: Set Host
       blockinfile:
-        path: /etc/ansible/hosts
+        create: true
+        path: "{{ INVENTORY_PATH }}"
         block: |
           [{{ GUEST_NAME }}]
-          root@{{ vm_ip }} ansible_ssh_pass=test123
+          root@{{ vm_ip }} ansible_ssh_pass=test123 ansible_ssh_common_args= '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
