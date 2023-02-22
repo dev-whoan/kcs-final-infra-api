@@ -1,0 +1,12 @@
+- name: Set VM Public IP
+  hosts: "{{ GUEST_NAME }}"
+  become: true
+  tasks:
+    - name: Set Public IP
+      lineinfile:
+        path: /etc/netplan/50-cloud-init.yaml
+        state: present
+        insertafter: "ethernets:"
+        line: "    enp1s0:\n      dhcp4: true"
+    - name: Netplan Apply
+      command: sudo netplan apply

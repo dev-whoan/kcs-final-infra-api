@@ -1,5 +1,5 @@
-const Ansible = require('node-ansible');
-const path = require('path');
+const Ansible = require("node-ansible");
+const path = require("path");
 /*
 - name: Create and Start VM
   hosts: localhost
@@ -68,18 +68,18 @@ class AnsibleManager {
   constructor() {
     this.scaledWorkerList = [];
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY;
-    this.yamlPath = path.join(process.env.PWD, 'playbooks');
+    this.yamlPath = path.join(process.env.PWD, "playbooks");
   }
 
   scaleOut() {
-    const scaledWorkerName = '';
-    const yamlName = 'scale-out';
+    const scaledWorkerName = "";
+    const yamlName = "scale-out";
     const yaml = path.join(this.yamlPath, yamlName);
     /* Provisioning */
     const command = new Ansible.Playbook()
-      .playbook('scale-out')
-      .variables({ GUEST_NAME: 'jammy-ansible-...' })
-      .askPass('test123');
+      .playbook("scale-out")
+      .variables({ GUEST_NAME: "jammy-ansible-..." })
+      .askPass("test123");
   }
 
   /**
@@ -88,23 +88,46 @@ class AnsibleManager {
   scaleIn() {
     /* Provisioning */
     const command = new Ansible.Playbook()
-      .playbook('scale-in')
-      .variables({ GUEST_NAME: 'jammy-ansible-...' })
-      .askPass('test123');
+      .playbook("scale-in")
+      .variables({ GUEST_NAME: "jammy-ansible-..." })
+      .askPass("test123");
 
-      command.exec();
+    command.exec();
   }
 }
 
 /* Function */
-const yamlPath = path.join(process.env.PWD, 'playbooks', 'provisioning')
+const yamlPath = path.join(process.env.PWD, "playbooks", "provisioning");
 console.log("YamlPath", yamlPath);
-const command = new Ansible.Playbook().playbook(yamlPath).variables({ GUEST_NAME: 'jammy-ansible-...' }).askPass('test123');
+const command = new Ansible.Playbook()
+  .playbook(yamlPath)
+  .variables({ GUEST_NAME: "jammy-ansible" })
+  .user("root")
+  .askPass("test123");
 
 const result = command.exec();
 
-result.then((success) => {
-  console.log('succeed', success);
-}, (err) => {
-  console.log('Failed', err);
-})
+result.then(
+  (success) => {
+    console.log("succeed", success);
+    console.log("Setting Public IP...");
+
+    /* 분기 */
+    const ipPath = path.join(process.env.PWD, "playbooks", "setPublicIP");
+    const ipCommand = new Ansible.Playbook()
+      .playbook(ipPath)
+      .variables({ GUEST_NAME: "jammy-ansible" })
+      .user("root")
+      .askPass();
+
+    const ipResult = ipCommand.exec();
+    ipResult.then(
+      (success) => console.log(success),
+      (err) => console.error(err)
+    );
+    /* 분기 */
+  },
+  (err) => {
+    console.log("Failed", err);
+  }
+);
