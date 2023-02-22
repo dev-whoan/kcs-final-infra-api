@@ -1,4 +1,5 @@
-import Ansible from 'node-ansible';
+const Ansible = require('node-ansible');
+const path = require('path');
 /*
 - name: Create and Start VM
   hosts: localhost
@@ -67,14 +68,18 @@ class AnsibleManager {
   constructor() {
     this.scaledWorkerList = [];
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY;
+    this.yamlPath = path.join(process.env.PWD, 'playbooks');
   }
 
   scaleOut() {
     const scaledWorkerName = '';
+    const yamlName = 'scale-out';
+    const yaml = path.join(this.yamlPath, yamlName);
     /* Provisioning */
     const command = new Ansible.Playbook()
       .playbook('scale-out')
-      .variables({ GUEST_NAME: 'jammy-ansible-...' });
+      .variables({ GUEST_NAME: 'jammy-ansible-...' })
+      .askPass('test123');
   }
 
   /**
@@ -84,6 +89,22 @@ class AnsibleManager {
     /* Provisioning */
     const command = new Ansible.Playbook()
       .playbook('scale-in')
-      .variables({ GUEST_NAME: 'jammy-ansible-...' });
+      .variables({ GUEST_NAME: 'jammy-ansible-...' })
+      .askPass('test123');
+
+      command.exec();
   }
 }
+
+/* Function */
+const yamlPath = path.join(process.env.PWD, 'playbooks', 'provisioning')
+console.log("YamlPath", yamlPath);
+const command = new Ansible.Playbook().playbook(yamlPath).variables({ GUEST_NAME: 'jammy-ansible-...' }).askPass('test123');
+
+const result = command.exec();
+
+result.then((success) => {
+  console.log('succeed', success);
+}, (err) => {
+  console.log('Failed', err);
+})
