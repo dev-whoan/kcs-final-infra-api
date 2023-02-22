@@ -1,5 +1,8 @@
 .env
 
+/ansible-config/inventory
+/ansible-config/inventory/**
+
 # compiled output
 /dist
 /node_modules
