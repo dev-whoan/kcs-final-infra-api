@@ -21,6 +21,7 @@
 
 - name: Add Host to Ansible Inventory
   hosts: localhost
+  gather_facts: false
   become: true
   tasks:
     - name: Get IP Address

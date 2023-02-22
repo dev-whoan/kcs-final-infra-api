@@ -10,6 +10,6 @@
         # The String to Search
         regexp: "dhcp4: no"
         # The String to Replace
-        line: "dhcp4: yes"
+        line: "      dhcp4: yes"
     - name: Netplan Apply
       command: sudo netplan apply

@@ -3,6 +3,7 @@ import path from "path";
 import UnableToCreateVirtualMachineException from "../exception/unableToCreateVirtualMachineException.js";
 import { objectKeysToArray } from "../common/util.js";
 import fs from "fs";
+import UnableToReadVirtualMachineException from "../exception/unableToReadVirtualMachineException.js";
 
 class Worker {
   constructor(name, floatingIp, privateIp) {
@@ -42,13 +43,7 @@ class AnsibleManager {
         worker3: "00:50:52:33:f1:ee",
       },
     };
-    this.STATIC_PRIV_IPS = {
-      master1: "192.168.122.10",
-      master2: "192.168.122.20",
-      worker1: "192.168.122.101",
-      worker2: "192.168.122.102",
-      worker3: "192.168.122.103",
-    };
+
     this.staticVMs = ["master1", "master2"]; //, "worker1", "worker2", "worker3"];
     this.scaleWorkerPrefix = "dworker";
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY
@@ -68,24 +63,39 @@ class AnsibleManager {
   }
 
   async #initialize() {
-    let vmAllNames = await this.readvms();
+    let vmAllNames = [];
+    try {
+      vmAllNames = await this.readvms();
+    } catch (err) {
+      console.error(err.stack || err);
+      throw new UnableToReadVirtualMachineException(`Fail to initialize Infra`);
+    }
+
     let vmIpList = [];
 
     console.log("VMALLNAMES: ", vmAllNames);
-    if (
-      !vmAllNames ||
-      vmAllNames.length === 0 ||
-      !vmAllNames.includes("master1") ||
-      !vmAllNames.includes("master2") /* ||
-      !vmAllNames.includes("worker1") ||
-      !vmAllNames.includes("worker2") ||
-      !vmAllNames.includes("worker3")*/
-    ) {
-      await this.createStaticMachines();
+    const createList = this.staticVMs.filter(
+      (name) => !vmAllNames.includes(name)
+    );
+    console.log("Create list: ", createList);
+    if (createList.length !== 0) {
+      console.log("Creating static machines: ", createList);
+      await this.createStaticMachines(createList);
       console.log("Succeed to create static machines");
-      vmAllNames = await this.readvms();
     }
 
+    try {
+      vmAllNames = await this.readvms();
+    } catch (err) {
+      console.error(err.stack || err);
+      throw new UnableToReadVirtualMachineException(
+        `Fail to initialize Infra. Please restart the service.`
+      );
+    }
+
+    console.log("Read VM ALL Names: ", vmAllNames);
+
+    console.log(" Reading IPs ... ");
     // IP 구하기
     for (let i = 0; i < vmAllNames.length; i++) {
       const item = vmAllNames[i];
@@ -99,16 +109,16 @@ class AnsibleManager {
     console.log(this.workingWorkers);
   }
 
-  createStaticMachines() {
+  createStaticMachines(createList) {
     return new Promise(async (resolve, reject) => {
       try {
-        for (let i = 0; i < this.staticVMs.length; i++) {
-          const item = this.staticVMs[i];
+        for (let i = 0; i < createList.length; i++) {
+          const item = createList[i];
           console.debug("Creating Static VM: ", item);
 
           const inventoryPath = path.join(this.inventoryPath, `${item}.txt`);
           await this.scaleOut(item, inventoryPath);
-          if (i === this.staticVMs.length - 1) {
+          if (i === createList.length - 1) {
             return resolve(true);
           }
         }
@@ -175,31 +185,33 @@ class AnsibleManager {
     });
   }
 
-  async readvms() {
-    const yamlName = "read-vm";
-    const yaml = path.join(this.yamlPath, yamlName);
-    const readCommand = this.createCommand(yaml);
+  readvms() {
+    return new Promise(async (resolve, reject) => {
+      const yamlName = "read-vm";
+      const yaml = path.join(this.yamlPath, yamlName);
+      const readCommand = this.createCommand(yaml);
 
-    let vmLists = [];
+      let vmLists = [];
 
-    try {
-      const result = await readCommand.execAsync();
-      const jsonResult = this.getResultAsJson(result.output);
-      const tasks = jsonResult.plays[0].tasks;
+      try {
+        const result = await readCommand.execAsync();
+        const jsonResult = this.getResultAsJson(result.output);
+        const tasks = jsonResult.plays[0].tasks;
 
-      for (let i = 0; i < tasks.length; i++) {
-        const item = tasks[i];
-        if (item.task.name === this.FUNC_NAME.readVms) {
-          vmLists = item.hosts.localhost.list_vms;
-          break;
+        for (let i = 0; i < tasks.length; i++) {
+          const item = tasks[i];
+          if (item.task.name === this.FUNC_NAME.readVms) {
+            vmLists = item.hosts.localhost.list_vms;
+            break;
+          }
         }
-      }
 
-      return vmLists;
-    } catch (err) {
-      console.error("error while reading vms", err);
-      return null;
-    }
+        return resolve(vmLists);
+      } catch (err) {
+        console.error("error while reading vms", err);
+        return reject(err);
+      }
+    });
   }
 
   async getPrivateIP(GUEST_NAME) {
