@@ -1,0 +1,23 @@
+- name: Kubeadm Reset
+  hosts: "{{ GUEST_NAME }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Reset Kubeadm
+      shell: kubeadm reset --force
+
+    - name: Remove /home/.kube
+      file:
+        state: absent
+        path: $HOME/.kube
+      ignore_errors: true
+
+    - name: Restart kubelet docker
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items: ["kubelet", "docker"]
+
+    - name: Daemon Reload
+      systemd:
+        daemon_reload: true

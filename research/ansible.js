@@ -5,8 +5,8 @@ import { objectKeysToArray } from "../common/util.js";
 import fs from "fs";
 import UnableToReadVirtualMachineException from "../exception/unableToReadVirtualMachineException.js";
 import UnableToResetK8sClusterException from "../exception/unableToResetK8sClusterException.js";
-import UnableToCreateK8sClusterException from "../exception/unableToSetK8sMasterException.js";
-import UnableToSetK8sMasterException from "../exception/unableToCreateK8sClusterException.js";
+import UnableToSetK8sMasterException from "../exception/unableToSetK8sMasterException.js";
+import UnableToCreateK8sClusterException from "../exception/unableToCreateK8sClusterException.js";
 /**
  * To Do List
  * Turn on Virtual Machines when it is defined but turned off
@@ -135,7 +135,14 @@ class AnsibleManager {
 
     //* Initialize Kubernetes
     if (createList.includes("master1")) {
-      this.k8sInitialize();
+      console.log(
+        "Master1 is included in create List... resetting k8s cluster.."
+      );
+      try {
+        await this.k8sInitialize();
+      } catch (err) {
+        throw err;
+      }
     }
   }
 
@@ -395,44 +402,49 @@ class AnsibleManager {
    * Initializing Kubeadm
    */
   async k8sInitialize() {
-    const master = this.workingWorkers.find(
-      (element) => element.name === "master1"
-    );
-    console.log(master);
-
-    if (!master) {
-      throw new UnableToCreateVirtualMachineException(
-        `Fail to initialize K8s Cluster. Cannot find master1 information`
+    return new Promise(async (resolve, reject) => {
+      const master = this.workingWorkers.find(
+        (element) => element.name === "master1"
       );
-    }
+      console.log("k8s initialize master info: ", master);
 
-    //* initialize using floating ip
-    let MASTER_IP = master.floatingIp;
-    for (let i = 0; i < this.workingWorkers.length; i++) {
-      const worker = this.workingWorkers[i];
+      if (!master) {
+        throw new UnableToCreateVirtualMachineException(
+          `Fail to initialize K8s Cluster. Cannot find master1 information`
+        );
+      }
 
-      if (worker.name === "master1") {
+      //* initialize using floating ip
+      let MASTER_IP = master.floatingIp;
+      for (let i = 0; i < this.workingWorkers.length; i++) {
+        const worker = this.workingWorkers[i];
+
+        if (worker.name === "master1") {
+          try {
+            console.log("Master1 initializing...");
+            await this.k8sMasterInit(worker.name, MASTER_IP);
+          } catch (err) {
+            throw err;
+          }
+
+          continue;
+        }
+
+        //* master for hpa. but not currently supported also will join to cluster as worker
+        //   if (worker.name === "master2") {
+        //     continue;
+        //   }
+        //* 4. kubeadm-join.yml
         try {
-          await k8sMasterInit(worker.name, MASTER_IP);
+          console.log(`Worker[${worker.name}] joining...`);
+          await this.k8sWorkerJoin(worker.name, MASTER_IP);
         } catch (err) {
           throw err;
         }
-
-        continue;
       }
 
-      //* master for hpa. but not currently supported also will join to cluster as worker
-      //   if (worker.name === "master2") {
-      //     continue;
-      //   }
-      //* 4. kubeadm-join.yml
-      try {
-        await k8sWorkerJoin(worker.name, MASTER_IP);
-      } catch (err) {
-        throw err;
-      }
-    }
-
+      resolve(true);
+    });
     // Expected output: 12
   }
 
@@ -450,14 +462,16 @@ class AnsibleManager {
       const playDir = path.join(this.yamlPath, "k8s");
       const resetYaml = path.join(playDir, "kubeadm-reset");
       const initYaml = path.join(playDir, "kubeadm-init");
-      const setMasterYaml = path.join(playDir, "kubeadm-master");
+      const setMasterYaml = path.join(playDir, "kubeset-master");
 
       //* 1. kubeadm-reset.yml -> GUEST_NAME
       try {
+        console.log(`Resetting cluster [${GUEST_NAME}]...`);
         const resetCommand = this.createCommand(resetYaml, inventory, {
           GUEST_NAME,
         });
         const resetResult = await resetCommand.execAsync();
+        console.log(`Resetting cluster [${GUEST_NAME}] done`);
       } catch (err) {
         console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
         throw new UnableToResetK8sClusterException(
@@ -467,10 +481,12 @@ class AnsibleManager {
 
       //* 2. kubeadm-init.yml -> MASTER_IP
       try {
+        console.log(`kubeadm init cluster [${GUEST_NAME}]...`);
         const initCommand = this.createCommand(initYaml, inventory, {
           MASTER_IP,
         });
         const initResult = await initCommand.execAsync();
+        console.log(`kubeadm init cluster [${GUEST_NAME}] done`);
       } catch (err) {
         console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
         throw new UnableToCreateK8sClusterException(
@@ -480,12 +496,14 @@ class AnsibleManager {
 
       //* 3. kubeset-master.yml
       try {
+        console.log(`Setting Cluster(CNI, MetalLB) [${GUEST_NAME}]...`);
         const setMasterCommand = this.createCommand(
           setMasterYaml,
           inventory,
           null
         );
         const setMasterResult = await setMasterCommand.execAsync();
+        console.log(`Setting Cluster(CNI, MetalLB) [${GUEST_NAME}] done`);
       } catch (err) {
         console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
         throw new UnableToSetK8sMasterException(
@@ -512,10 +530,12 @@ class AnsibleManager {
 
     //* 1. kubeadm-reset.yml -> GUEST_NAME
     try {
+      console.log(`Resetting cluster [${GUEST_NAME}]...`);
       const resetCommand = this.createCommand(resetYaml, inventory, {
         GUEST_NAME,
       });
       const resetResult = await resetCommand.execAsync();
+      console.log(`Resetting cluster [${GUEST_NAME}] done`);
     } catch (err) {
       console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
       throw new UnableToResetK8sClusterException(
@@ -525,11 +545,13 @@ class AnsibleManager {
 
     //* 2. kubeadm-join.yml -> GUEST_NAME, MASTER_IP
     try {
+      console.log(`Joining cluster [${GUEST_NAME}] -> [${MASTER_IP}]...`);
       const joinCommand = this.createCommand(initYaml, inventory, {
         GUEST_NAME,
         MASTER_IP,
       });
       const joinResult = await joinCommand.execAsync();
+      console.log(`Joining cluster [${GUEST_NAME}] -> [${MASTER_IP}] done`);
     } catch (err) {
       console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
       throw new UnableToResetK8sClusterException(

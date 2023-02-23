@@ -1,8 +1,8 @@
-class UnableToSetK8sMasterException extends Error {
+class UnableToCreateK8sClusterException extends Error {
   constructor(message) {
     super(message);
-    this.name = "UnableToSetK8sMasterException";
+    this.name = "UnableToCreateK8sClusterException";
   }
 }
 
-export default UnableToSetK8sMasterException;
+export default UnableToCreateK8sClusterException;
