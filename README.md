@@ -1,73 +1,66 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Research Ansible
+## How to run
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Installation
-
-```bash
-$ npm install
+```shell
+~$ node research/ansible.js
+Initializing...
+VMALLNAMES:  []
+Create list:  [ 'master1', 'worker1' ]
+Creating static machines:  [ 'master1', 'worker1' ]
+Creating Static VM:  master1
+master1 00:50:52:11:25:03 00:50:52:f3:17:32
+provisioning -> vm: starting..
+provisioning -> vm: done
+provisioning -> name: starting..
+provisioning -> name: done
+provisioning -> fip: starting..
+provisioning -> fip: done
+Creating Static VM:  worker1
+worker1 00:50:52:83:ff:29 00:50:52:e3:ae:26
+provisioning -> vm: starting..
+provisioning -> vm: done
+provisioning -> name: starting..
+provisioning -> name: done
+provisioning -> fip: starting..
+provisioning -> fip: done
+Succeed to create static machines
+Read VM ALL Names:  [ 'master1', 'worker1' ]
+Reading IPs ...
+fip stdout: 192.168.0.241
+192.168.0.255
+fip stdout_lines: [ '192.168.0.241', '192.168.0.255' ]
+fip stdout: 192.168.0.243
+192.168.0.255
+fip stdout_lines: [ '192.168.0.243', '192.168.0.255' ]
+[
+  Worker {
+    name: 'master1',
+    floatingIp: '192.168.0.241',
+    privateIp: '192.168.122.43'
+  },
+  Worker {
+    name: 'worker1',
+    floatingIp: '192.168.0.243',
+    privateIp: '192.168.122.95'
+  }
+]
+Succeed to initialize!
+Master1 is included in create List... resetting k8s cluster..
+k8s initialize master info:  Worker {
+  name: 'master1',
+  floatingIp: '192.168.0.241',
+  privateIp: '192.168.122.43'
+}
+Master1 initializing...
+Resetting cluster [master1]...
+Resetting cluster [master1] done
+kubeadm init cluster [master1]...
+kubeadm init cluster [master1] done
+Setting Cluster(CNI, MetalLB) [master1]...
+Setting Cluster(CNI, MetalLB) [master1] done
+Worker[worker1] joining...
+Resetting cluster [worker1]...
+Resetting cluster [worker1] done
+Joining cluster [worker1] -> [192.168.0.241]...
+Joining cluster [worker1] -> [192.168.0.241] done
 ```
-
-## Running the app
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Test
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](LICENSE).
