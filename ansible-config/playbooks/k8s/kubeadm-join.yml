@@ -1,0 +1,7 @@
+- name: Kubeadm Worker Join
+  hosts: "{{ GUEST_NAME }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create Kubeadm Config
+      shell: sudo kubeadm join {{ MASTER_IP }}:6443 --token abcdef.1234567890abcdef --discovery-token-unsafe-skip-ca-verification

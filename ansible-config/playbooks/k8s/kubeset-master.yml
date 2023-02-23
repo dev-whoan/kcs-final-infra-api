@@ -5,18 +5,16 @@
   tasks:
     - name: Install CNI and MetalLB
       shell: |
-        sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/tigera-operator.yaml
-        sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/custom-resources.yaml
+        sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/calico.yaml
 
-        echo "sleep 3 secs..."
         sleep 3
-
-        echo "setting metallb..."
 
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/metallb-namespace.yaml
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/metallb.yaml
         sudo kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
+        sleep 3
 
-        echo "sleep 1 sec..."
+        sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/metallb-resource.yaml
+
         sleep 1
