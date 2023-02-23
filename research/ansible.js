@@ -128,7 +128,9 @@ class AnsibleManager {
     }
 
     //* sort result: master1, master2, worker1, worker2, ...
-    this.workingWorkers.sort();
+    this.workingWorkers.sort((a, b) => {
+      return a.name > b.name ? 1 : b.name > a.name ? -1 : 0;
+    });
 
     console.log(this.workingWorkers);
     console.log("Succeed to initialize!");
