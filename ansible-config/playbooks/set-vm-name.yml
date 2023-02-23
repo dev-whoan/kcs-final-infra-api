@@ -11,7 +11,7 @@
         regexp: "ubuntu"
         # The String to Replace
         line: "{{ GUEST_NAME }}"
-        
+
     - name: Reboot
       reboot:
         reboot_timeout: 300

@@ -1,0 +1,30 @@
+- name: Kubeadm Initialize
+  hosts: master1
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create Kubeadm Config
+      get_url:
+        url: http://www.eg-playground.xyz:8090/kubeadm.conf
+        dest: /root/kubeadm.conf
+        mode: "0755"
+
+    - name: Set Api Server Address
+      lineinfile:
+        path: /root/kubeadm.conf
+        state: present
+        # The String to Search
+        regexp: "[[ MASTER_IP ]]"
+        # The String to Replace
+        line: "  advertiseAddress: {{ MASTER_IP }}"
+
+    - name: Kubeadm Start
+      shell: kubeadm init --config /root/kubeadm.conf
+
+    - name: Copy Certificate /etc/kubernetes/admin.conf
+      shell: |
+        sudo mkdir -p /root/.kube
+        cp /etc/kubernetes/admin.conf /root/.kube/config
+        sudo chown -R root:root /root/.kube
+      retries: 80
+      delay: 3

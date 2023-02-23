@@ -31,6 +31,19 @@ class AnsibleManager {
       readFloatingIP: "Get Floating IP",
     };
     this.workingWorkers = [];
+    this.CAPACITY = {
+      CPU: {
+        master1: 3,
+        master2: 3,
+      },
+      MEMORY: {
+        master1: 4096,
+        master2: 4096,
+        worker1: 2048,
+        worker2: 2048,
+        worker3: 2048,
+      },
+    };
     this.STATIC_MACS = {
       FLOATING: {
         master1: "00:50:52:11:25:03",
@@ -48,7 +61,7 @@ class AnsibleManager {
       },
     };
 
-    this.staticVMs = ["master1"]//, "master2", "worker1", "worker2", "worker3"];
+    this.staticVMs = ["master1", "master2", "worker1", "worker2", "worker3"];
     this.scaleWorkerPrefix = "dworker";
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY
       ? process.env.VM_SCALED_CAPACITY
@@ -112,6 +125,8 @@ class AnsibleManager {
 
     console.log(this.workingWorkers);
     console.log("Succeed to initialize!");
+
+    this.k8sInitialize();
   }
 
   createStaticMachines(createList) {
@@ -284,19 +299,30 @@ class AnsibleManager {
       const yamlName = "provisioning";
       const yaml = path.join(this.yamlPath, yamlName);
       /* Provisioning */
-      const FLOAT_MAC_ADDR = this.STATIC_MACS.FLOATING.GUEST_NAME
-        ? this.STATIC_MACS.FLOATING.GUEST_NAME
+      const FLOAT_MAC_ADDR = this.STATIC_MACS.FLOATING[GUEST_NAME]
+        ? this.STATIC_MACS.FLOATING[GUEST_NAME]
         : this.generateMacAddr();
 
-      const PRIV_MAC_ADDR = this.STATIC_MACS.PRIVATE.GUEST_NAME
-        ? this.STATIC_MACS.PRIVATE.GUEST_NAME
+      const PRIV_MAC_ADDR = this.STATIC_MACS.PRIVATE[GUEST_NAME]
+        ? this.STATIC_MACS.PRIVATE[GUEST_NAME]
         : this.generateMacAddr();
+
+      const V_CPUS = this.CAPACITY.CPU[GUEST_NAME]
+        ? this.CAPACITY.CPU[GUEST_NAME]
+        : 2;
+      const V_MEMORY = this.CAPACITY.MEMORY[GUEST_NAME]
+        ? this.CAPACITY.MEMORY[GUEST_NAME]
+        : 2048;
+
+      console.log(GUEST_NAME, FLOAT_MAC_ADDR, PRIV_MAC_ADDR);
 
       const provisioningCommand = this.createCommand(yaml, null, {
         GUEST_NAME,
         INVENTORY_PATH,
         FLOAT_MAC_ADDR,
         PRIV_MAC_ADDR,
+        V_CPUS,
+        V_MEMORY,
         // vm_ip: this.STATIC_PRIV_IPS[GUEST_NAME],
       });
 
@@ -353,6 +379,24 @@ class AnsibleManager {
       .variables({ GUEST_NAME });
 
     command.exec();
+  }
+
+  /**
+   * Initializing Kubeadm
+   * @param {string} GUEST_NAME guest name
+   */
+  async k8sInitialize(GUEST_NAME) {
+    const master = this.workingWorkers.find(
+      (element) => element.name === "master1"
+    );
+    console.log(master);
+
+    if (!master) {
+      throw new UnableToCreateVirtualMachineException(
+        `Fail to initialize K8s Cluster. Cannot find master1 information`
+      );
+    }
+    // Expected output: 12
   }
 
   /**
