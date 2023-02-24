@@ -8,11 +8,13 @@ import UnableToResetK8sClusterException from "../exception/unableToResetK8sClust
 import UnableToSetK8sMasterException from "../exception/unableToSetK8sMasterException.js";
 import UnableToCreateK8sClusterException from "../exception/unableToCreateK8sClusterException.js";
 import UnableToStartVirtualMachineException from "../exception/unableToStartVirtualMachineException.js";
-/**
- * To Do List
- * Turn on Virtual Machines when it is defined but turned off
- */
 
+/**
+ * Worker Class to managing Virtual Machines. It holds VM name, Floating IP, and Private IP.
+ * For now, Clustering will be proceeded using FLoating IP. It is because Private IP is set up with DHCP.
+ * Private IP is used to managing VM on Ansible.
+ * Ansible is communicating with each VMs using its Private IP.
+ */
 class Worker {
   constructor(name, floatingIp, privateIp) {
     this.name = name;
@@ -21,6 +23,10 @@ class Worker {
   }
 }
 
+/**
+ * [Singleton] Ansible Class to using Ansible. Basically it holds functions to Setting VMs.
+ * Such that; Creating, Booting, Naming, Getting IP, Clustering, and so on.
+ */
 class AnsibleManager {
   static instance;
   constructor() {
@@ -92,10 +98,11 @@ class AnsibleManager {
       console.error(err.stack || err);
       throw new UnableToReadVirtualMachineException(`Fail to initialize Infra`);
     }
+    console.log("Defined VMs: ", vmAllNames);
 
-    let vmIpList = [];
+    vmAllNames = this.staticVMs.filter((name) => vmAllNames.includes(name));
 
-    console.log("VMALLNAMES: ", vmAllNames);
+    console.log("K8S VMs: ", vmAllNames);
 
     if (!!vmAllNames && vmAllNames.length !== 0) {
       for (let i = 0; i < vmAllNames.length; i++) {
@@ -123,6 +130,7 @@ class AnsibleManager {
 
     try {
       vmAllNames = await this.readvms();
+      vmAllNames = this.staticVMs.filter((name) => vmAllNames.includes(name));
     } catch (err) {
       console.error(err.stack || err);
       throw new UnableToReadVirtualMachineException(
@@ -173,6 +181,7 @@ class AnsibleManager {
 
           const inventoryPath = path.join(this.inventoryPath, `${item}.txt`);
           await this.scaleOut(item, inventoryPath);
+          await this.restartVM(item, inventoryPath);
           if (i === createList.length - 1) {
             return resolve(true);
           }
@@ -202,6 +211,30 @@ class AnsibleManager {
         console.error(err.stack || err);
         throw new UnableToStartVirtualMachineException(
           `Fail to start Virtual Machine [${GUEST_NAME}]`
+        );
+      }
+    });
+  }
+
+  restartVM(GUEST_NAME) {
+    return new Promise(async (resolve, reject) => {
+      const inventoryPath = path.join(this.inventoryPath, GUEST_NAME);
+      const startYamlName = "reboot-vm";
+      const startYaml = path.join(this.yamlPath, startYamlName);
+      const startCommand = this.createCommand(startYaml, inventoryPath, {
+        GUEST_NAME,
+      }); // GUEST_NAME: guestName
+
+      try {
+        console.log(`Rebooting [${GUEST_NAME}]...`);
+        const result = await startCommand.execAsync();
+        const jsonResult = this.getResultAsJson(result.output);
+        console.log(`Rebooting [${GUEST_NAME}] done`);
+        return resolve(true);
+      } catch (err) {
+        console.error(err.stack || err);
+        throw new UnableToStartVirtualMachineException(
+          `Fail to restart Virtual Machine [${GUEST_NAME}]`
         );
       }
     });
@@ -462,6 +495,7 @@ class AnsibleManager {
           try {
             console.log("Master1 initializing...");
             await this.k8sMasterInit(worker.name, MASTER_IP);
+            await this.k8sMasterCICD(worker.name, MASTER_IP);
           } catch (err) {
             throw err;
           }
@@ -555,48 +589,83 @@ class AnsibleManager {
   }
 
   /**
+   * Deploy CI - Jenkins CD - ArgoCD to Cluster
+   * (CD is not prepared yet)
+   * @param {string} GUEST_NAME Guest name for initializing k8s node. basically, it must be master1
+   * @param {string} MASTER_IP master ip. ex) 192.168.0.241
+   */
+  k8sMasterCICD(GUEST_NAME, MASTER_IP) {
+    return new Promise(async (resolve, reject) => {
+      const inventory = path.join(this.inventoryPath, `${GUEST_NAME}.txt`);
+      const playDir = path.join(this.yamlPath, "k8s");
+      const jenkinsYaml = path.join(playDir, "jenkins");
+
+      //* 1. jenkins.yml
+      try {
+        console.log(`Deploying Jenkins [${GUEST_NAME}]...`);
+        const command = this.createCommand(jenkinsYaml, inventory, {
+          GUEST_NAME,
+        });
+        const result = await command.execAsync();
+        console.log(`Deploying Jenkins [${GUEST_NAME}] done`);
+      } catch (err) {
+        console.error(err.stack || err);
+        console.log("Fail to deploy Jenkins on Master1");
+      }
+
+      return resolve(true);
+    });
+
+    //* 2. Argo CD
+  }
+
+  /**
    * 1. kubeadm-reset.yml
    * 2. kubeadm-join.yml
    * @param {string} GUEST_NAME Guest name for initializing k8s node. basically, it must be master1
    * @param {string} MASTER_IP master ip. ex) 192.168.0.241
    */
   async k8sWorkerJoin(GUEST_NAME, MASTER_IP) {
-    //* 1. kubeadm-join.yml     -> GUEST_NAME, MASTER_IP
-    const inventory = path.join(this.inventoryPath, `${GUEST_NAME}.txt`);
-    const playDir = path.join(this.yamlPath, "k8s");
-    const resetYaml = path.join(playDir, "kubeadm-reset");
-    const initYaml = path.join(playDir, "kubeadm-join");
+    return new Promise(async (resolve, reject) => {
+      //* 1. kubeadm-join.yml     -> GUEST_NAME, MASTER_IP
+      const inventory = path.join(this.inventoryPath, `${GUEST_NAME}.txt`);
+      const playDir = path.join(this.yamlPath, "k8s");
+      const resetYaml = path.join(playDir, "kubeadm-reset");
+      const initYaml = path.join(playDir, "kubeadm-join");
 
-    //* 1. kubeadm-reset.yml -> GUEST_NAME
-    try {
-      console.log(`Resetting cluster [${GUEST_NAME}]...`);
-      const resetCommand = this.createCommand(resetYaml, inventory, {
-        GUEST_NAME,
-      });
-      const resetResult = await resetCommand.execAsync();
-      console.log(`Resetting cluster [${GUEST_NAME}] done`);
-    } catch (err) {
-      console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
-      throw new UnableToResetK8sClusterException(
-        `Fail to reset K8s Cluster -> ${GUEST_NAME}`
-      );
-    }
+      //* 1. kubeadm-reset.yml -> GUEST_NAME
+      try {
+        console.log(`Resetting cluster [${GUEST_NAME}]...`);
+        const resetCommand = this.createCommand(resetYaml, inventory, {
+          GUEST_NAME,
+        });
+        const resetResult = await resetCommand.execAsync();
+        console.log(`Resetting cluster [${GUEST_NAME}] done`);
+      } catch (err) {
+        console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
+        throw new UnableToResetK8sClusterException(
+          `Fail to reset K8s Cluster -> ${GUEST_NAME}`
+        );
+      }
 
-    //* 2. kubeadm-join.yml -> GUEST_NAME, MASTER_IP
-    try {
-      console.log(`Joining cluster [${GUEST_NAME}] -> [${MASTER_IP}]...`);
-      const joinCommand = this.createCommand(initYaml, inventory, {
-        GUEST_NAME,
-        MASTER_IP,
-      });
-      const joinResult = await joinCommand.execAsync();
-      console.log(`Joining cluster [${GUEST_NAME}] -> [${MASTER_IP}] done`);
-    } catch (err) {
-      console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
-      throw new UnableToResetK8sClusterException(
-        `Fail to reset K8s Cluster -> ${GUEST_NAME}`
-      );
-    }
+      //* 2. kubeadm-join.yml -> GUEST_NAME, MASTER_IP
+      try {
+        console.log(`Joining cluster [${GUEST_NAME}] -> [${MASTER_IP}]...`);
+        const joinCommand = this.createCommand(initYaml, inventory, {
+          GUEST_NAME,
+          MASTER_IP,
+        });
+        const joinResult = await joinCommand.execAsync();
+        console.log(`Joining cluster [${GUEST_NAME}] -> [${MASTER_IP}] done`);
+      } catch (err) {
+        console.error(`Fail to reset k8s [${GUEST_NAME}]`, err);
+        throw new UnableToResetK8sClusterException(
+          `Fail to reset K8s Cluster -> ${GUEST_NAME}`
+        );
+      }
+
+      return resolve(true);
+    });
   }
 
   /**

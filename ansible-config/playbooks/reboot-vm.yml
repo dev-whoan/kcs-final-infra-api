@@ -1,0 +1,8 @@
+- name: Set VM Hostname And Reboot
+  hosts: "{{ GUEST_NAME }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Reboot
+      reboot:
+        reboot_timeout: 300
