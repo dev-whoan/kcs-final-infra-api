@@ -280,7 +280,7 @@ class AnsibleManager {
    * @param {string} GUEST_NAME explicitly select target host, and it will be its hostname
    * @returns
    */
-  async renameAndRebootVM(GUEST_NAME) {
+  async renameVM(GUEST_NAME) {
     return new Promise(async (resolve, reject) => {
       const yamlName = "set-vm-name";
       const yaml = path.join(this.yamlPath, yamlName);
@@ -429,7 +429,7 @@ class AnsibleManager {
       //* set host name and reboot
       try {
         console.log("provisioning -> name: starting..");
-        await this.renameAndRebootVM(GUEST_NAME);
+        await this.renameVM(GUEST_NAME);
         console.log("provisioning -> name: done");
       } catch (err) {
         console.error("Error occured while provisioning -> name", err);
