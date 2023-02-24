@@ -598,11 +598,10 @@ class AnsibleManager {
     return new Promise(async (resolve, reject) => {
       const inventory = path.join(this.inventoryPath, `${GUEST_NAME}.txt`);
       const playDir = path.join(this.yamlPath, "k8s");
-      const jenkinsYaml = path.join(playDir, "jenkins");
-
       //* 1. jenkins.yml
       try {
         console.log(`Deploying Jenkins [${GUEST_NAME}]...`);
+        const jenkinsYaml = path.join(playDir, "jenkins");
         const command = this.createCommand(jenkinsYaml, inventory, {
           GUEST_NAME,
         });
@@ -611,6 +610,20 @@ class AnsibleManager {
       } catch (err) {
         console.error(err.stack || err);
         console.log("Fail to deploy Jenkins on Master1");
+      }
+
+      //* 2. argocd
+      try{
+        console.log(`Deploying ArgoCD [${GUEST_NAME}]...`);
+        const yaml = path.join(playDir, "argocd");
+        const command = this.createCommand(yaml, inventory, {
+          GUEST_NAME,
+        });
+        const result = await command.execAsync();
+        console.log(`Deploying ArgCD [${GUEST_NAME}] done`);
+      } catch (err) {
+        console.error(err.stack || err);
+        console.log("Fail to deploy ArgoCD on Master1");
       }
 
       return resolve(true);
