@@ -7,6 +7,7 @@ import UnableToReadVirtualMachineException from "../exception/unableToReadVirtua
 import UnableToResetK8sClusterException from "../exception/unableToResetK8sClusterException.js";
 import UnableToSetK8sMasterException from "../exception/unableToSetK8sMasterException.js";
 import UnableToCreateK8sClusterException from "../exception/unableToCreateK8sClusterException.js";
+import UnableToStartVirtualMachineException from "../exception/unableToStartVirtualMachineException.js";
 /**
  * To Do List
  * Turn on Virtual Machines when it is defined but turned off
@@ -95,6 +96,21 @@ class AnsibleManager {
     let vmIpList = [];
 
     console.log("VMALLNAMES: ", vmAllNames);
+
+    if (!!vmAllNames && vmAllNames.length !== 0) {
+      for (let i = 0; i < vmAllNames.length; i++) {
+        const item = vmAllNames[i];
+        try {
+          console.log("Start Defined VM: ", item);
+          await this.ensureVMStarted(item);
+        } catch (e) {
+          throw new UnableToStartVirtualMachineException(
+            `Fail to start defined VM on bootup [${item}]`
+          );
+        }
+      }
+    }
+
     const createList = this.staticVMs.filter(
       (name) => !vmAllNames.includes(name)
     );
@@ -170,6 +186,27 @@ class AnsibleManager {
     });
   }
 
+  ensureVMStarted(GUEST_NAME) {
+    return new Promise(async (resolve, reject) => {
+      const startYamlName = "start-vm";
+      const startYaml = path.join(this.yamlPath, startYamlName);
+      const startCommand = this.createCommand(startYaml, null, {
+        GUEST_NAME,
+      }); // GUEST_NAME: guestName
+
+      try {
+        const result = await startCommand.execAsync();
+        const jsonResult = this.getResultAsJson(result.output);
+        return resolve(true);
+      } catch (err) {
+        console.error(err.stack || err);
+        throw new UnableToStartVirtualMachineException(
+          `Fail to start Virtual Machine [${GUEST_NAME}]`
+        );
+      }
+    });
+  }
+
   /**
    *
    * @param {string} yaml yaml file path
@@ -220,7 +257,7 @@ class AnsibleManager {
       });
 
       try {
-        const result = await rebootCommand.exec();
+        const result = await rebootCommand.execAsync();
         const jsonResult = this.getResultAsJson(result.output);
         return resolve(true);
       } catch (err) {
