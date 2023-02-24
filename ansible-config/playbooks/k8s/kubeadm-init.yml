@@ -5,7 +5,7 @@
   tasks:
     - name: Create Kubeadm Config
       get_url:
-        url: http://www.eg-playground.xyz:8090/kubeadm.conf
+        url: http://210.179.249.40:8090/kubeadm.conf
         dest: /root/kubeadm.conf
         mode: "0755"
 

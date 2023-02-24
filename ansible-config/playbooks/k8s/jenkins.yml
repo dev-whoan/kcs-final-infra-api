@@ -4,4 +4,4 @@
   become: true
   tasks:
     - name: Create a Deployment by reading the definition from a local file
-      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/jenkins/jenkins.yaml
+      shell: kubectl apply -f http://210.179.249.40:8090/kcs-final/jenkins/jenkins.yaml
