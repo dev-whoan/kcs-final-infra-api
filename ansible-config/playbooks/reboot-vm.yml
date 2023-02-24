@@ -7,9 +7,10 @@
       shell: virsh destroy {{ GUEST_NAME }}
 
     - name: Ensure VM Shut Down
-      shell: virsh list | grep {{ GUEST_NAME }}
+      shell:
+        cmd: virsh list --all | grep master1 | grep 'shut off'
       register: vm_up_list
-      until: vm_up_list.stdout == ''
+      until: vm_up_list.stdout | length > 0
       retries: 30
       delay: 10
 
