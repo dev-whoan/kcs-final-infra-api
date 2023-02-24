@@ -23,7 +23,7 @@
     - name: Ensure VM Shut Down
       shell: virsh list | grep {{ GUEST_NAME }}
       register: vm_up_list
-      until: vm_up_list == ''
+      until: vm_up_list.stdout == ''
       retries: 30
       delay: 10
 
