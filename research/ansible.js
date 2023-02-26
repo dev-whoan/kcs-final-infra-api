@@ -72,7 +72,7 @@ class AnsibleManager {
     };
 
     //this.staticVMs = ["master1", "master2", "worker1", "worker2", "worker3"];
-    this.staticVMs = ["master1", "worker1"];
+    this.staticVMs = ["master1", "worker1", "worker2"];
     this.scaleWorkerPrefix = "dworker";
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY
       ? process.env.VM_SCALED_CAPACITY
@@ -169,7 +169,20 @@ class AnsibleManager {
       } catch (err) {
         throw err;
       }
+    } else {
+      const joinList = createList.filter((worker) => worker.name !== "master1");
+      const master = this.workingWorkers.filter(
+        (worker) => worker.name === "master1"
+      )[0];
+
+      for (let i = 0; i < joinList.length; i++) {
+        const name = joinList[i];
+        console.log(name);
+        await this.k8sWorkerJoin(name, master.floatingIp);
+      }
     }
+
+    console.log("Complete to initialize the infra");
   }
 
   createStaticMachines(createList) {
@@ -294,6 +307,10 @@ class AnsibleManager {
         const jsonResult = this.getResultAsJson(result.output);
         return resolve(true);
       } catch (err) {
+        console.error(
+          `Error occured while renaming VM [${GUEST_NAME}]`,
+          err.message
+        );
         return reject(err);
       }
     });
@@ -348,6 +365,10 @@ class AnsibleManager {
         }
       }
     } catch (err) {
+      console.error(
+        `Error occured while getting private ip [${GUEST_NAME}]`,
+        err.message
+      );
       return null;
     }
   }
@@ -417,7 +438,7 @@ class AnsibleManager {
 
       //* Provisioning
       try {
-        console.log("provisioning -> vm: starting..");
+        console.log(`provisioning [${GUEST_NAME}] -> vm: starting..`);
         const provisioningResult = await provisioningCommand.execAsync();
         const jsonResult = this.getResultAsJson(provisioningResult.output);
         console.log("provisioning -> vm: done");
@@ -428,7 +449,7 @@ class AnsibleManager {
 
       //* set host name and reboot
       try {
-        console.log("provisioning -> name: starting..");
+        console.log(`provisioning [${GUEST_NAME}] -> name: starting..`);
         await this.renameVM(GUEST_NAME);
         console.log("provisioning -> name: done");
       } catch (err) {
@@ -438,7 +459,7 @@ class AnsibleManager {
 
       //* Set VM Floating IP
       try {
-        console.log("provisioning -> fip: starting..");
+        console.log(`provisioning [${GUEST_NAME}] -> fip: starting..`);
         const floatingYamlName = "set-floating-ip";
         const fYaml = path.join(this.yamlPath, floatingYamlName);
         const floatingCommand = this.createCommand(fYaml, INVENTORY_PATH, {
@@ -613,7 +634,7 @@ class AnsibleManager {
       }
 
       //* 2. argocd
-      try{
+      try {
         console.log(`Deploying ArgoCD [${GUEST_NAME}]...`);
         const yaml = path.join(playDir, "argocd");
         const command = this.createCommand(yaml, inventory, {
