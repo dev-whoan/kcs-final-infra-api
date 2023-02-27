@@ -15,6 +15,6 @@
 
         sleep 3
 
-        sudo kubectl apply -f http://210.179.249.40:8090/kcs-final/metallb-resource.yaml
+        sudo kubectl apply -f http://210.179.249.40:8090/kcs-final/metallb-resource-kcs.yaml
 
         sleep 1
