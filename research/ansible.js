@@ -49,9 +49,9 @@ class AnsibleManager {
       MEMORY: {
         master1: 4096,
         master2: 4096,
-        worker1: 2048,
-        worker2: 2048,
-        worker3: 2048,
+        worker1: 6144,
+        worker2: 6144,
+        worker3: 6144,
       },
     };
     this.STATIC_MACS = {
@@ -72,7 +72,7 @@ class AnsibleManager {
     };
 
     //this.staticVMs = ["master1", "master2", "worker1", "worker2", "worker3"];
-    this.staticVMs = ["master1", "worker1", "worker2"];
+    this.staticVMs = ["master1", "worker1", "worker2", "worker3"];
     this.scaleWorkerPrefix = "dworker";
     this.scaledCapacity = process.env.VM_SCALED_CAPACITY
       ? process.env.VM_SCALED_CAPACITY
@@ -305,6 +305,11 @@ class AnsibleManager {
       try {
         const result = await rebootCommand.execAsync();
         const jsonResult = this.getResultAsJson(result.output);
+        console.log(
+          "Renaming VM Result: ",
+          jsonResult?.plays?.tasks,
+          jsonResult?.stats
+        );
         return resolve(true);
       } catch (err) {
         console.error(
@@ -467,8 +472,12 @@ class AnsibleManager {
         });
 
         const floatingResult = await floatingCommand.execAsync();
-        const jsonResult = this.getResultAsJson(floatingResult.output);
-        console.log("provisioning -> fip: done");
+        const result = this.getResultAsJson(floatingResult.output);
+        console.log(
+          "provisioning -> fip: done",
+          result?.plays?.tasks,
+          result?.stats
+        );
         setTimeout(() => {
           return resolve(true);
         }, this.VM_CREATED_AWAIT_TIME);
@@ -508,7 +517,8 @@ class AnsibleManager {
       }
 
       //* initialize using floating ip
-      let MASTER_IP = master.floatingIp;
+      const MASTER_IP = master.floatingIp;
+      const NFS_IP = "192.168.0.204";
       for (let i = 0; i < this.workingWorkers.length; i++) {
         const worker = this.workingWorkers[i];
 
@@ -517,6 +527,7 @@ class AnsibleManager {
             console.log("Master1 initializing...");
             await this.k8sMasterInit(worker.name, MASTER_IP);
             await this.k8sMasterCICD(worker.name, MASTER_IP);
+            await this.k8sMasterDBs(worker.name, MASTER_IP, NFS_IP);
           } catch (err) {
             throw err;
           }
@@ -649,8 +660,50 @@ class AnsibleManager {
 
       return resolve(true);
     });
+  }
 
-    //* 2. Argo CD
+  /**
+   * Deploy DB - MongoDB, Redis
+   * (CD is not prepared yet)
+   * @param {string} GUEST_NAME Guest name for initializing k8s node. basically, it must be master1
+   * @param {string} MASTER_IP Master ip. ex) 192.168.0.241
+   * @param {string} NFS_IP NFS Server ip. ex) 192.168.0.204
+   */
+  async k8sMasterDBs(GUEST_NAME, MASTER_IP, NFS_IP) {
+    return new Promise(async (resolve, reject) => {
+      const inventory = path.join(this.inventoryPath, `${GUEST_NAME}.txt`);
+      const playDir = path.join(this.yamlPath, "k8s");
+      //* 1. mongodb.yml -> NFS_IP
+      try {
+        console.log(`Deploying MongoDB [${GUEST_NAME}]...`);
+        const jenkinsYaml = path.join(playDir, "mongodb");
+        const command = this.createCommand(jenkinsYaml, inventory, {
+          GUEST_NAME,
+          NFS_IP,
+        });
+        const result = await command.execAsync();
+        console.log(`Deploying MongoDB [${GUEST_NAME}] done`);
+      } catch (err) {
+        console.error(err.stack || err);
+        console.log("Fail to deploy Mongodb on Master1");
+      }
+
+      //* 2. argocd
+      try {
+        console.log(`Deploying Redis [${GUEST_NAME}]...`);
+        const yaml = path.join(playDir, "redis");
+        const command = this.createCommand(yaml, inventory, {
+          GUEST_NAME,
+        });
+        const result = await command.execAsync();
+        console.log(`Deploying Redis [${GUEST_NAME}] done`);
+      } catch (err) {
+        console.error(err.stack || err);
+        console.log("Fail to deploy Redis on Master1");
+      }
+
+      return resolve(true);
+    });
   }
 
   /**

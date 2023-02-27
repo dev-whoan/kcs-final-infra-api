@@ -4,10 +4,5 @@
   become: true
   tasks:
     - name: Set Hostname
-      lineinfile:
-        path: /etc/hostname
-        state: present
-        # The String to Search
-        regexp: "ubuntu"
-        # The String to Replace
-        line: "{{ GUEST_NAME }}"
+      shell:
+        cmd: sudo echo "{{ GUEST_NAME }}" > /etc/hostname
