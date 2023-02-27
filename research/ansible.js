@@ -393,7 +393,7 @@ class AnsibleManager {
           console.log("fip stdout:", item.hosts[hostName].stdout);
           console.log("fip stdout_lines:", item.hosts[hostName].stdout_lines);
           const ips = item.hosts[hostName].stdout_lines.filter(
-            (item) => item !== "192.168.0.255"
+            (item) => item !== "192.168.255.255"
           );
           return ips[0];
         }
@@ -548,7 +548,7 @@ class AnsibleManager {
    * 2. kubeadm-init.yml     -> MASTER_IP
    * 3. kubeset-master.yml
    * @param {string} GUEST_NAME Guest name for initializing k8s node. basically, it must be master1
-   * @param {string} MASTER_IP master ip. ex) 192.168.0.241
+   * @param {string} MASTER_IP master ip. ex) s.241
    */
   async k8sMasterInit(GUEST_NAME, MASTER_IP) {
     return new Promise(async (resolve, reject) => {
