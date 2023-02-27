@@ -14,6 +14,6 @@
   become: true
   tasks:
     - name: Get Floating IP
-      shell: ip a | grep 192.168.0 | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
+      shell: ip a | grep 192.168.50 | grep -oE '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
       register: floating_ip
     
