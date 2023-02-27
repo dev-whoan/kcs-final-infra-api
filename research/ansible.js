@@ -146,6 +146,26 @@ class AnsibleManager {
       const item = vmAllNames[i];
       const privateIp = await this.getPrivateIP(item);
       const floatingIp = await this.getFloatingIP(item, privateIp);
+      if (!floatingIp) {
+        console.log(
+          `Cannot get Floating IP of Machine [${item}]... Resetting..`
+        );
+
+        try {
+          console.log("renaming...");
+          await this.renameVM(item);
+          console.log("resetting floating ip..");
+          await this.setFloatingIP(item);
+          console.log("rebooting...");
+          await this.restartVM(item);
+          console.log("Done!");
+        } catch (err) {
+          console.error(
+            `Fail to set Virtual Machine.. Please destroy and re-provision it. [${item}]`,
+            err.stack || err
+          );
+        }
+      }
       const nWorker = new Worker(item, floatingIp, privateIp);
 
       this.workingWorkers.push(nWorker);
@@ -298,16 +318,16 @@ class AnsibleManager {
       const yamlName = "set-vm-name";
       const yaml = path.join(this.yamlPath, yamlName);
       const inventoryPath = path.join(this.inventoryPath, `${GUEST_NAME}.txt`);
-      const rebootCommand = this.createCommand(yaml, inventoryPath, {
+      const command = this.createCommand(yaml, inventoryPath, {
         GUEST_NAME,
       });
 
       try {
-        const result = await rebootCommand.execAsync();
+        const result = await command.execAsync();
         const jsonResult = this.getResultAsJson(result.output);
         console.log(
           "Renaming VM Result: ",
-          jsonResult?.plays?.tasks,
+          jsonResult?.plays[0],
           jsonResult?.stats
         );
         return resolve(true);
@@ -464,10 +484,25 @@ class AnsibleManager {
 
       //* Set VM Floating IP
       try {
+        await this.setFloatingIP(GUEST_NAME);
+        return resolve(true);
+      } catch (err) {
+        return reject(false);
+      }
+    });
+  }
+
+  async setFloatingIP(GUEST_NAME) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const inventoryPath = path.join(
+          this.inventoryPath,
+          `${GUEST_NAME}.txt`
+        );
         console.log(`provisioning [${GUEST_NAME}] -> fip: starting..`);
         const floatingYamlName = "set-floating-ip";
         const fYaml = path.join(this.yamlPath, floatingYamlName);
-        const floatingCommand = this.createCommand(fYaml, INVENTORY_PATH, {
+        const floatingCommand = this.createCommand(fYaml, inventoryPath, {
           GUEST_NAME,
         });
 
@@ -475,7 +510,7 @@ class AnsibleManager {
         const result = this.getResultAsJson(floatingResult.output);
         console.log(
           "provisioning -> fip: done",
-          result?.plays?.tasks,
+          result?.plays[0].tasks,
           result?.stats
         );
         setTimeout(() => {
@@ -526,8 +561,6 @@ class AnsibleManager {
           try {
             console.log("Master1 initializing...");
             await this.k8sMasterInit(worker.name, MASTER_IP);
-            await this.k8sMasterCICD(worker.name, MASTER_IP);
-            await this.k8sMasterDBs(worker.name, MASTER_IP, NFS_IP);
           } catch (err) {
             throw err;
           }
@@ -546,6 +579,13 @@ class AnsibleManager {
         } catch (err) {
           throw err;
         }
+      }
+
+      try {
+        await this.k8sMasterCICD("master1", MASTER_IP);
+        await this.k8sMasterDBs("master1", MASTER_IP, NFS_IP);
+      } catch (err) {
+        throw err;
       }
 
       resolve(true);

@@ -4,5 +4,19 @@
   become: true
   tasks:
     - name: Set Hostname
-      shell:
-        cmd: sudo echo "{{ GUEST_NAME }}" > /etc/hostname
+      shell: |
+        sleep 3
+        sudo hostname {{ GUEST_NAME }}
+        sudo echo "{{ GUEST_NAME }}" > /etc/hostname
+
+    - name: Set Hostname
+      shell: |
+        sleep 3
+        sudo hostname {{ GUEST_NAME }}
+        sudo echo "{{ GUEST_NAME }}" > /etc/hostname
+
+    - name: Set Hostname
+      shell: |
+        sleep 3
+        sudo hostname {{ GUEST_NAME }}
+        sudo echo "{{ GUEST_NAME }}" > /etc/hostname
