@@ -5,7 +5,7 @@
   tasks:
     - name: Define VM
       command: >
-        virt-install --import --name {{ GUEST_NAME }}
+        virt-install --name {{ GUEST_NAME }}
         --memory {{ V_MEMORY }} --vcpus {{ V_CPUS }} --noautoconsole
         --os-variant ubuntu22.04 --hvm --network bridge=br0,mac={{ FLOAT_MAC_ADDR }}
         --network network=default,mac={{ PRIV_MAC_ADDR }}
