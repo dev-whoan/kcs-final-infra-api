@@ -20,6 +20,11 @@
         url: http://www.eg-playground.xyz:8090/kcs-final/database/mongodb-fs.yaml
         dest: /root/mongodb-fs.yaml
         mode: "0755"
+    - name: Download MongoDB Post
+      get_url:
+        url: http://www.eg-playground.xyz:8090/kcs-final/database/mongodb-post.yaml
+        dest: /root/mongodb-post.yaml
+        mode: "0755"
 
     - name: Set MongoDB NFS Address
       replace:
@@ -31,6 +36,7 @@
           "/root/mongodb-user.yaml",
           "/root/mongodb-fs.yaml",
           "/root/mongodb-community.yaml",
+          "/root/mongodb-post.yaml"
         ]
 
     - name: Deploy MongoDB Resource
@@ -45,4 +51,5 @@
           "/root/mongodb-user.yaml",
           "/root/mongodb-fs.yaml",
           "/root/mongodb-community.yaml",
+          "/root/mongodb-post.yaml"
         ]
