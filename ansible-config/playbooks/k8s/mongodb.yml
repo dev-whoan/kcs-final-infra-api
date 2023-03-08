@@ -9,12 +9,6 @@
         dest: /root/mongodb-user.yaml
         mode: "0755"
 
-    - name: Download MongoDB Community
-      get_url:
-        url: http://www.eg-playground.xyz:8090/kcs-final/database/mongodb-community.yaml
-        dest: /root/mongodb-community.yaml
-        mode: "0755"
-
     - name: Download MongoDB File Server
       get_url:
         url: http://www.eg-playground.xyz:8090/kcs-final/database/mongodb-fs.yaml
@@ -35,7 +29,6 @@
         [
           "/root/mongodb-user.yaml",
           "/root/mongodb-fs.yaml",
-          "/root/mongodb-community.yaml",
           "/root/mongodb-post.yaml"
         ]
 
@@ -50,6 +43,5 @@
         [
           "/root/mongodb-user.yaml",
           "/root/mongodb-fs.yaml",
-          "/root/mongodb-community.yaml",
           "/root/mongodb-post.yaml"
         ]
