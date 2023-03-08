@@ -8,7 +8,6 @@
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/database/redis-namespace.yaml
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/database/redis-config.yaml
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/database/redis-user.yaml
-        sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/database/redis-community.yaml
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/database/redis-fs.yaml
         sudo kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/database/redis-post.yaml
          
