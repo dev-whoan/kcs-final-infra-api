@@ -1,0 +1,25 @@
+- name: Install Monitoring - Grafana & Prometheus
+  hosts: master1
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create a Required Resources
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/monitoring-resource.yaml
+
+    - name: Create a Prometheus Configmap
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/prometheus-cfg.yaml
+
+    - name: Create a RBAC
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/rbac.yaml
+
+    - name: Create a Metric Server
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/metric.yaml
+
+    - name: Create a Prometheus
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/prometheus.yaml
+
+    - name: Create a Grafana
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/grafana.yaml
+
+    - name: Createa Exporter
+      shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/monitoring/exporter.yaml
