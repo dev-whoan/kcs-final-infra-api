@@ -1,4 +1,4 @@
-- name: Install Jenkins
+- name: Install ArgoCD
   hosts: master1
   gather_facts: false
   become: true
@@ -8,3 +8,10 @@
 
     - name: Create a Deployment by reading the definition from a local file
       shell: kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/argocd/argocd.yaml -n argocd
+
+    - name: Deploy Configmaps for Tripdiary
+      shell: |
+      kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/argocd/api-gw-cm.yaml
+      kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/argocd/user-cm.yaml
+      kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/argocd/fs-cm.yaml
+      kubectl apply -f http://www.eg-playground.xyz:8090/kcs-final/argocd/post-cm.yaml
